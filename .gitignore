@@ -1,0 +1,60 @@
+# Byte-compiled / optimized / ambient Python files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.env
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# -------------------------------------------------------
+# Raw Genomic & Clinical Data (large, not suitable for Git)
+# -------------------------------------------------------
+data/raw/**
+
+# Processed heavy matrices (recreate via pipeline scripts)
+data/processed/*.parquet
+data/processed/*.xlsx
+data/processed/tcga_brca_model_ready_cohort.csv
+data/processed/mutation_sample_summary.csv
+data/processed/mutation_matrix_top200.csv
+
+# Global large-file patterns
+*.parquet
+*.tar.gz
+*.gz
+*.tsv
+
+# GDC client binary & manifest downloads
+gdc-client.exe
+gdc_manifest*.txt
+gdc_sample_sheet*.tsv
+
+# Temp working directory
+temp/
+
+# -------------------------------------------------------
+# Keep these tracked (negation overrides)
+# -------------------------------------------------------
+# Processed CSVs that are small enough to commit
+!data/processed/patients_master.csv
+!data/processed/survival.csv
+!data/processed/samples.csv
+
+# Reports and figures
+!reports/
+!reports/figures/
+!reports/figures/*.png
+
+# IDE, OS & System Metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
