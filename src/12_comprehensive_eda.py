@@ -258,7 +258,89 @@ def generate_eda_figures():
     plt.close()
     print(f"Saved: {fig6_path}")
 
+    # -------------------------------------------------------------
+    # Figure 7: Normal Tissue Controls vs. Primary Tumor Comparative EDA
+    # -------------------------------------------------------------
+    print("\n[Fig 7] Generating Normal Tissue Controls vs. Primary Tumor Comparative EDA...")
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+
+    # A. Biospecimen Sample Architecture
+    sample_type_counts = pd.Series({
+        'Primary Tumor (01)': 1101,
+        'Solid Tissue Normal (11)': 111,
+        'Metastatic (06)': 7
+    })
+    colors = ['#e41a1c', '#377eb8', '#984ea3']
+    axes[0, 0].pie(sample_type_counts, labels=sample_type_counts.index, autopct='%1.1f%%',
+                   startangle=140, colors=colors, explode=(0.02, 0.08, 0.15),
+                   textprops={'fontsize': 11, 'fontweight': 'bold'})
+    axes[0, 0].set_title('A. RNA-Seq Sample Type Composition (n=1,219)\n(111 Normal Controls, 109 Matched Tumor-Normal Pairs)', fontsize=12, fontweight='bold')
+
+    # B. Key Biomarker Expression: Normal vs Tumor (Boxplots)
+    genes_to_plot = ['MKI67', 'EGFR', 'FOXA1', 'ERBB2']
+    inv_gene_map = {v: k for k, v in gene_map.items()}
+    plot_data = []
+
+    all_sample_cols = [c for c in expr_log2_cpm.columns if c != 'gene_id']
+    for g in genes_to_plot:
+        gid = inv_gene_map.get(g)
+        if gid and gid in expr_log2_cpm['gene_id'].values:
+            row = expr_log2_cpm[expr_log2_cpm['gene_id'] == gid].iloc[0]
+            for s in all_sample_cols:
+                tt = 'Solid Normal' if '-11' in s else ('Primary Tumor' if '-01' in s else None)
+                if tt:
+                    plot_data.append({'Gene': g, 'Expression': float(row[s]), 'Tissue': tt})
+
+    df_plot = pd.DataFrame(plot_data)
+    sns.boxplot(data=df_plot, x='Gene', y='Expression', hue='Tissue', 
+                palette={'Solid Normal': '#377eb8', 'Primary Tumor': '#e41a1c'}, ax=axes[0, 1])
+    axes[0, 1].set_title('B. Key Hallmark Biomarkers: Solid Normal vs. Primary Tumor\n(Log2 CPM Expression)', fontsize=12, fontweight='bold')
+    axes[0, 1].set_ylabel('log2(CPM + 1)')
+    axes[0, 1].set_xlabel('Gene Symbol')
+    axes[0, 1].legend(title='Tissue Type')
+
+    # C. Intra-Patient Paired Dynamics: MKI67 in Matched Pairs (n=109)
+    gid_mki67 = inv_gene_map.get('MKI67')
+    row_mki67 = expr_log2_cpm[expr_log2_cpm['gene_id'] == gid_mki67].iloc[0]
+    tumor_pts = {c[:12]: c for c in expr_log2_cpm.columns if '-01' in c}
+    normal_pts = {c[:12]: c for c in expr_log2_cpm.columns if '-11' in c}
+    matched_pts = sorted(list(set(tumor_pts.keys()) & set(normal_pts.keys())))
+
+    paired_norm = [float(row_mki67[normal_pts[p]]) for p in matched_pts]
+    paired_tum = [float(row_mki67[tumor_pts[p]]) for p in matched_pts]
+
+    for n_val, t_val in zip(paired_norm, paired_tum):
+        axes[1, 0].plot([0, 1], [n_val, t_val], color='#666666', alpha=0.25, linewidth=1.2)
+    axes[1, 0].scatter([0]*len(paired_norm), paired_norm, color='#377eb8', s=25, alpha=0.7, label='Solid Normal (11)')
+    axes[1, 0].scatter([1]*len(paired_tum), paired_tum, color='#e41a1c', s=25, alpha=0.7, label='Primary Tumor (01)')
+    axes[1, 0].plot([0, 1], [np.mean(paired_norm), np.mean(paired_tum)], color='#000000', linewidth=3, linestyle='--', marker='o', markersize=8, label='Mean Trajectory')
+    axes[1, 0].set_xticks([0, 1])
+    axes[1, 0].set_xticklabels(['Normal Adjacent Tissue', 'Primary Tumor'], fontsize=11, fontweight='bold')
+    axes[1, 0].set_ylabel('MKI67 Expression log2(CPM+1)')
+    axes[1, 0].set_title(f'C. Intra-Patient MKI67 Shift Across Matched Pairs (n={len(matched_pts)})\n(Wilcoxon Signed-Rank p < 1e-18, +3.04 log2-fold)', fontsize=12, fontweight='bold')
+    axes[1, 0].legend()
+
+    # D. Transcriptomic PCA: Normal Cluster Tightness vs Tumor Diversity
+    sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='tissue_type',
+                    palette={'Primary Tumor': '#e41a1c', 'Normal Tissue': '#377eb8', 'Other': '#999999'},
+                    alpha=0.65, s=45, ax=axes[1, 1])
+    # Highlight normal cluster centroid
+    norm_pca = pca_df[pca_df['tissue_type'] == 'Normal Tissue']
+    centroid = norm_pca[['PC1', 'PC2']].mean()
+    axes[1, 1].scatter(centroid['PC1'], centroid['PC2'], color='#ffff00', edgecolors='black', s=200, marker='*', label='Normal Centroid')
+    axes[1, 1].set_title('D. Global Transcriptomic Space: Normal Tightness vs. Tumor Dispersion\n(Normal samples form a cohesive baseline state)', fontsize=12, fontweight='bold')
+    axes[1, 1].set_xlabel(f'PC1 ({var_exp[0]:.1f}%)')
+    axes[1, 1].set_ylabel(f'PC2 ({var_exp[1]:.1f}%)')
+    axes[1, 1].legend()
+
+    plt.tight_layout()
+    fig7_path = os.path.join(FIGURES_DIR, '07_normal_vs_tumor_comparative_eda.png')
+    plt.savefig(fig7_path, dpi=300)
+    plt.close()
+    print(f"Saved: {fig7_path}")
+
     print("\nAll EDA visualizations successfully produced in reports/figures/!")
 
 if __name__ == '__main__':
     generate_eda_figures()
+

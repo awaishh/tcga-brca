@@ -248,3 +248,18 @@ Expression files don't directly join to the cohort table. The connection works a
 | Top 2,000 variable genes (not all 60,660) | Reduces dimensionality for ML. Variance-based selection retains genes with the most discriminative signal. Protein-coding only removes pseudogenes and ncRNAs. |
 | CPM + log2(x+1) normalization | CPM corrects for library size differences between samples. Log2 transform compresses the dynamic range and approximates normality — both are standard for RNA-Seq. |
 | LEFT join from clinical as anchor | Ensures no patient is silently lost. Missing omics data is flagged (has_rna_seq) or zero-filled (mutations), never row-dropped. |
+
+---
+
+## 8. Non-Cancerous (Normal Control) Cohort Architecture
+
+| Metric | Count | Biological / Methodological Role |
+|---|---|---|
+| **Cancer-Free Healthy Patients** | **0** | TCGA-BRCA is exclusively an oncological cohort; all 1,098 patients were diagnosed with breast invasive carcinoma. |
+| **Solid Tissue Normal Biospecimens (Code 11)** | **162** (from 162 patients) | Histologically confirmed normal breast tissue adjacent to tumor margin; used as biological expression baseline. |
+| **Solid Tissue Normal RNA-Seq Profiles** | **111** (from 111 patients) | Fully sequenced and normalized transcriptomic profiles (`expression_matrix.parquet`, `sample_type_code == '11'`). |
+| **Matched Tumor-Normal RNA-Seq Pairs** | **109** patients | Both Primary Tumor (`01`) and Solid Normal (`11`) RNA-Seq sequenced from the same individual. |
+| **Blood Derived Normal Biospecimens (Code 10)** | **1,054** (from 1,023 patients) | Peripheral blood DNA used as germline reference in somatic variant calling to filter non-tumor variants. |
+| **Primary Tumor RNA-Seq Profiles (Code 01)** | **1,101** | Primary invasive breast carcinoma tissue profiles. |
+| **Metastatic RNA-Seq Profiles (Code 06)** | **7** | Distant metastasis tissue profiles. |
+
